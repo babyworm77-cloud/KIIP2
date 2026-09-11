@@ -1,0 +1,680 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>약국에서 이야기해요 | 2인 대화형</title>
+<style>
+  :root{
+    --blue:#2563eb;
+    --pink:#e11d68;
+    --yellow:#fee500;
+    --bg:#f6f7f9;
+    --line:#e5e7eb;
+    --text:#172033;
+    --muted:#6b7280;
+    --chat:#b2c7d9;
+    --green:#16a34a;
+    --amber:#d97706;
+    --red:#dc2626;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Noto Sans KR","Malgun Gothic",sans-serif;color:var(--text);background:var(--bg)}
+  body{overflow-x:hidden}
+  button,textarea{font:inherit}
+  button{cursor:pointer}
+  button:disabled,textarea:disabled{cursor:not-allowed}
+  .pair-tablet-page{min-height:100dvh}
+  .topbar{
+    height:56px;background:#fff;border-bottom:1px solid var(--line);
+    display:flex;align-items:center;justify-content:space-between;padding:0 18px;
+    font-size:.86rem;color:var(--muted);font-weight:700
+  }
+  .page{max-width:1220px;margin:0 auto;padding:18px 18px 24px}
+  .hero{margin-bottom:12px}
+  .badge{display:inline-flex;padding:5px 10px;border-radius:999px;background:#fff3b8;color:#735b00;font-size:.78rem;font-weight:800}
+  h1{font-size:clamp(1.45rem,2.4vw,2rem);margin:7px 0 4px;letter-spacing:-.04em}
+  .instruction{margin:0;color:#5f6877;font-size:.9rem}
+  .pair-room{
+    display:grid;
+    grid-template-columns:minmax(178px,.72fr) minmax(430px,1.8fr) minmax(178px,.72fr);
+    gap:12px;height:min(610px,calc(100dvh - 142px));min-height:520px
+  }
+  .student-panel{
+    background:#fff;border:2px solid transparent;border-radius:18px;padding:16px;
+    box-shadow:0 8px 24px rgba(31,41,55,.08);display:flex;flex-direction:column;min-width:0;
+    transition:border-color .2s,box-shadow .2s
+  }
+  .student-panel[data-active="true"]{
+    border-color:#f5c400;box-shadow:0 0 0 5px rgba(254,229,0,.25),0 10px 26px rgba(31,41,55,.10)
+  }
+  .identity{display:flex;align-items:center;gap:10px}
+  .avatar{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:900;font-size:1.15rem}
+  .minjun .avatar{background:var(--blue)}
+  .sora .avatar{background:var(--pink)}
+  .name{font-weight:900;font-size:1.1rem}
+  .turn-info{font-size:.76rem;color:var(--muted);margin-top:2px}
+  .state{margin:18px 0 12px;padding:10px 11px;border-radius:11px;background:#f7f8fa;font-size:.82rem;line-height:1.45;min-height:58px}
+  .state.active{background:#fff9cf;color:#5e4b00;font-weight:700}
+  .speak-btn{
+    border:0;border-radius:12px;padding:12px 10px;color:#fff;font-weight:900;
+    box-shadow:0 5px 12px rgba(0,0,0,.12);transition:transform .15s,opacity .15s
+  }
+  .speak-btn:active:not(:disabled){transform:translateY(1px)}
+  .minjun .speak-btn{background:var(--blue)}
+  .sora .speak-btn{background:var(--pink)}
+  .speak-btn:disabled{background:#cbd0d7;box-shadow:none;color:#707782}
+  details.manual{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+  details.manual summary{font-size:.82rem;font-weight:800;cursor:pointer}
+  textarea{
+    width:100%;height:82px;margin-top:9px;padding:9px;border:1px solid #d4d8de;border-radius:10px;
+    resize:none;font-size:.86rem;line-height:1.45;background:#fff
+  }
+  textarea:focus{outline:2px solid rgba(37,99,235,.25);border-color:#93b4ff}
+  .confirm-btn{width:100%;margin-top:7px;border:1px solid #d4d8de;background:#fff;border-radius:9px;padding:8px;font-weight:800;font-size:.8rem}
+  .confirm-btn:disabled{background:#f1f2f4;color:#a1a7b0}
+  .chat-panel{
+    min-width:0;background:#fff;border-radius:18px;overflow:hidden;display:grid;
+    grid-template-rows:52px minmax(0,1fr) 46px;box-shadow:0 8px 26px rgba(31,41,55,.12)
+  }
+  .chat-header{display:flex;align-items:center;justify-content:space-between;padding:0 15px;border-bottom:1px solid var(--line);background:#fff}
+  .chat-title{font-weight:900;font-size:.94rem}
+  .progress{font-size:.76rem;color:var(--muted);font-weight:800}
+  .chat-window{background:var(--chat);overflow-y:auto;overflow-x:hidden;padding:18px 14px;scroll-behavior:auto}
+  .chat-list{display:flex;flex-direction:column;gap:15px;min-height:100%}
+  .message{display:flex;flex-direction:column;max-width:82%;transition:opacity .2s}
+  .message.minjun{align-self:flex-start}
+  .message.sora{align-self:flex-end}
+  .message.future{opacity:.52}
+  .speaker-label{font-size:.7rem;font-weight:900;margin:0 6px 4px;color:#263444}
+  .message.sora .speaker-label{text-align:right}
+  .bubble-wrap{position:relative}
+  .bubble{
+    position:relative;padding:11px 13px;border-radius:15px;line-height:1.48;font-size:.92rem;
+    box-shadow:0 2px 5px rgba(0,0,0,.08);word-break:keep-all;background:#fff
+  }
+  .message.minjun .bubble{border-top-left-radius:4px}
+  .message.sora .bubble{background:var(--yellow);border-top-right-radius:4px}
+  .message.current .bubble{box-shadow:0 0 0 4px #fff,0 8px 20px rgba(17,24,39,.20)}
+  .grade{
+    position:absolute;left:-7px;top:-13px;width:27px;height:27px;border-radius:50%;
+    display:grid;place-items:center;background:#fff;border:2px solid #fff;
+    box-shadow:0 2px 7px rgba(0,0,0,.25);font-weight:1000;font-size:.83rem;z-index:2
+  }
+  .message.sora .grade{left:auto;right:-7px}
+  .grade.o{color:var(--green);border-color:#fff}
+  .grade.triangle{color:var(--amber);border-color:#fff}
+  .grade.x{color:var(--red);border-color:#fff}
+  .grade-text{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .spoken{margin-top:9px;padding-top:8px;border-top:1px solid rgba(60,70,80,.18)}
+  .spoken-label{font-size:.68rem;font-weight:900;color:#53606e;margin-bottom:3px}
+  .spoken-text{font-size:.82rem;line-height:1.4}
+  .turn-bar{display:flex;align-items:center;justify-content:center;padding:7px 10px;background:#fff;border-top:1px solid var(--line)}
+  .next-btn{border:0;border-radius:10px;background:#202938;color:#fff;padding:9px 18px;font-size:.82rem;font-weight:900;min-width:132px}
+  .next-btn:disabled{background:#c9ced6;color:#747b85}
+  .chat-status{position:absolute;left:-99999px}
+  .under{
+    margin-top:12px;background:#fff;border-radius:14px;border:1px solid var(--line);padding:0 14px
+  }
+  details.record summary{padding:12px 0;cursor:pointer;font-weight:900;font-size:.84rem}
+  .record-body{border-top:1px solid var(--line);padding:11px 0 13px;font-size:.78rem;color:#66707d;line-height:1.55}
+  .record-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+  .record-actions button{border:1px solid #d6d9df;background:#fff;border-radius:8px;padding:7px 10px;font-size:.76rem;font-weight:800}
+  .save-state{font-weight:800;color:#374151}
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#202938;color:#fff;padding:9px 13px;border-radius:9px;font-size:.78rem;opacity:0;pointer-events:none;transition:opacity .2s;z-index:10}
+  .toast.show{opacity:1}
+  @media(max-width:760px){
+    .topbar{height:50px;padding:0 12px}
+    .page{padding:12px}
+    .pair-room{
+      grid-template-columns:1fr 1fr;
+      grid-template-rows:auto minmax(500px,530px);
+      height:auto;min-height:0
+    }
+    .chat-panel{grid-column:1 / -1;grid-row:2;min-height:500px}
+    .student-panel{padding:12px}
+    .avatar{width:40px;height:40px;font-size:1rem}
+    .name{font-size:1rem}
+    .state{margin:10px 0 8px;min-height:52px;font-size:.76rem}
+    .speak-btn{padding:10px 7px;font-size:.8rem}
+    .manual textarea{height:70px}
+  }
+  @media(max-width:390px){
+    .pair-room{grid-template-rows:auto minmax(500px,520px)}
+    .student-panel{padding:10px}
+    .turn-info{font-size:.68rem}
+    .state{font-size:.72rem}
+    .speak-btn{font-size:.74rem}
+    .chat-window{padding:16px 10px}
+    .message{max-width:88%}
+  }
+  @media(prefers-reduced-motion:reduce){
+    *{scroll-behavior:auto!important;transition:none!important}
+  }
+</style>
+</head>
+<body class="pair-tablet-page">
+<header class="topbar">
+  <strong>한국어 말하기 활동</strong>
+  <span>2인 대화형 · 태블릿 가로</span>
+</header>
+
+<main class="page">
+  <section class="hero">
+    <span class="badge">1~2급 · 약국 대화</span>
+    <h1>차례에 맞춰 대화해요</h1>
+    <p class="instruction">노란 테두리가 켜진 학생이 자기 쪽 말하기 버튼을 누르세요.</p>
+  </section>
+
+  <section class="pair-room" id="pairRoom">
+    <aside class="student-panel minjun" id="panelMinjun" data-active="true">
+      <div class="identity">
+        <div class="avatar" aria-hidden="true">약</div>
+        <div>
+          <div class="name">약사</div>
+          <div class="turn-info">1 · 3 · 5번째 대사</div>
+        </div>
+      </div>
+      <div class="state active" id="stateMinjun">지금 내 대사를 말하세요.</div>
+      <button class="speak-btn" id="speakMinjun" type="button">약사 말하기 시작</button>
+      <details class="manual">
+        <summary>직접 입력</summary>
+        <textarea id="inputMinjun" aria-label="약사의 대사 직접 입력" placeholder="약사의 대사를 입력하세요"></textarea>
+        <button class="confirm-btn" id="confirmMinjun" type="button">입력 확인</button>
+      </details>
+    </aside>
+
+    <section class="chat-panel" aria-label="약국 대화창">
+      <header class="chat-header">
+        <div class="chat-title">약국 대화방</div>
+        <div class="progress" id="progress">현재 진행 1 / 6</div>
+      </header>
+      <div class="chat-window" id="chatWindow" aria-live="polite">
+        <div class="chat-list" id="chatList"></div>
+      </div>
+      <div class="turn-bar">
+        <button class="next-btn" id="nextBtn" type="button" disabled>다음 차례</button>
+      </div>
+    </section>
+
+    <aside class="student-panel sora" id="panelSora" data-active="false">
+      <div class="identity">
+        <div class="avatar" aria-hidden="true">이</div>
+        <div>
+          <div class="name">이링</div>
+          <div class="turn-info">2 · 4 · 6번째 대사</div>
+        </div>
+      </div>
+      <div class="state" id="stateSora">상대의 차례를 기다리세요.</div>
+      <button class="speak-btn" id="speakSora" type="button" disabled>이링 말하기 시작</button>
+      <details class="manual">
+        <summary>직접 입력</summary>
+        <textarea id="inputSora" aria-label="이링의 대사 직접 입력" placeholder="이링의 대사를 입력하세요" disabled></textarea>
+        <button class="confirm-btn" id="confirmSora" type="button" disabled>입력 확인</button>
+      </details>
+    </aside>
+  </section>
+
+  <div class="under">
+    <details class="record">
+      <summary>피드백 표시와 활동 기록</summary>
+      <div class="record-body">
+        O는 문장이 잘 전달된 경우, △는 일부를 다시 말하면 좋은 경우, X는 모범 대사를 보고 다시 연습하면 좋은 경우입니다.
+        학생이 말한 내용은 원문 바로 아래에 표시됩니다.
+        <div class="record-actions">
+          <span class="save-state" id="saveState">저장 상태: 자동 저장</span>
+          <button id="downloadBtn" type="button">기록 내려받기</button>
+          <button id="resetBtn" type="button">이 활동 초기화</button>
+        </div>
+      </div>
+    </details>
+  </div>
+</main>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  const PAGE_ID = 'pair';
+  const STORAGE_KEY = 'korean-speaking-demo.v1.pair';
+
+  // JPG 대화문을 그대로 6개 차례로 적용
+  const LINES = [
+    { speaker: 'minjun', name: '약사', text: '어떻게 오셨어요?' },
+    { speaker: 'sora', name: '이링', text: '배가 아프고 설사를 해요.' },
+    { speaker: 'minjun', name: '약사', text: '언제부터 아팠어요?' },
+    { speaker: 'sora', name: '이링', text: '오늘 아침부터 아팠어요.' },
+    { speaker: 'minjun', name: '약사', text: '그럼 이 약을 지금 드세요. 그래도 계속 아프면 하루에 두 번, 아침과 저녁에 드세요.' },
+    { speaker: 'sora', name: '이링', text: '그리고 죽을 끓여서 드세요.' }
+  ];
+
+  const state = {
+    turn: 0,
+    responses: {},
+    scores: {},
+    drafts: {},
+    completed: false
+  };
+
+  const $ = id => document.getElementById(id);
+  const chatWindow = $('chatWindow');
+  const chatList = $('chatList');
+  const nextBtn = $('nextBtn');
+  const progress = $('progress');
+  const toast = $('toast');
+
+  function safeObject(value){
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  }
+
+  function responseText(value){
+    if(typeof value === 'string') return value.trim();
+    if(value && typeof value === 'object' && typeof value.text === 'string') return value.text.trim();
+    return '';
+  }
+
+  function normalizeTurn(value){
+    const n = Number(value);
+    return Number.isFinite(n) ? Math.max(0, Math.min(5, Math.trunc(n))) : 0;
+  }
+
+  function hasAllResponses(){
+    return LINES.every((_, i) => responseText(state.responses[i]));
+  }
+
+  function load(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return;
+      const saved = JSON.parse(raw);
+      state.turn = normalizeTurn(saved.turn);
+      state.responses = safeObject(saved.responses);
+      state.scores = safeObject(saved.scores);
+      state.drafts = safeObject(saved.drafts);
+      state.completed = saved.completed === true && hasAllResponses();
+    }catch(err){
+      console.warn('저장값 복원 실패', err);
+    }
+  }
+
+  function persist(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        turn: state.turn,
+        responses: state.responses,
+        scores: state.scores,
+        drafts: state.drafts,
+        completed: state.completed
+      }));
+      $('saveState').textContent = '저장 상태: 자동 저장됨';
+    }catch(err){
+      console.warn('저장 실패', err);
+      $('saveState').textContent = '저장 상태: 저장할 수 없음';
+    }
+  }
+
+  function lcsLength(a,b){
+    const A = a.trim().split(/\s+/).filter(Boolean);
+    const B = b.trim().split(/\s+/).filter(Boolean);
+    if(!A.length || !B.length) return 0;
+    const dp = Array(B.length + 1).fill(0);
+    for(let i=1;i<=A.length;i++){
+      let prev = 0;
+      for(let j=1;j<=B.length;j++){
+        const temp = dp[j];
+        if(A[i-1] === B[j-1]) dp[j] = prev + 1;
+        else dp[j] = Math.max(dp[j], dp[j-1]);
+        prev = temp;
+      }
+    }
+    return dp[B.length];
+  }
+
+  function scoreSpeech(target, spoken){
+    const t = target.trim();
+    const s = spoken.trim();
+    if(!s) return 0;
+
+    // 공백 기준 LCS + 문자 기준 보조 유사도.
+    // 짧은 핵심어를 말한 경우도 지나치게 낮아지지 않도록 문장 길이를 함께 반영한다.
+    const targetWords = t.split(/\s+/).filter(Boolean);
+    const spokenWords = s.split(/\s+/).filter(Boolean);
+    const lcs = lcsLength(t, s);
+    const wordScore = (2 * lcs / Math.max(1, targetWords.length + spokenWords.length)) * 100;
+
+    const norm = x => x.replace(/[^\p{L}\p{N}]/gu,'');
+    const tn = norm(t), sn = norm(s);
+    let common = 0;
+    const chars = [...tn];
+    const used = new Array(sn.length).fill(false);
+    for(const ch of chars){
+      const idx = [...sn].findIndex((c,i)=>!used[i] && c === ch);
+      if(idx >= 0){ used[idx] = true; common++; }
+    }
+    const charScore = 100 * (2 * common / Math.max(1, tn.length + sn.length));
+
+    // 문장 전체를 정확히 말하면 100, 부분 발화는 LCS 방식으로 평가
+    let score = Math.round(0.65 * wordScore + 0.35 * charScore);
+    if(t === s) score = 100;
+
+    return Math.max(0, Math.min(100, score));
+  }
+
+  function gradeFor(score){
+    if(score >= 85) return {symbol:'O', key:'o', label:'잘 전달됐어요'};
+    if(score >= 65) return {symbol:'△', key:'triangle', label:'거의 전달됐어요'};
+    return {symbol:'X', key:'x', label:'다시 말해 보세요'};
+  }
+
+  function saveDraftFromInputs(){
+    const value = state.turn % 2 === 0 ? $('inputMinjun').value : $('inputSora').value;
+    if(value.trim()){
+      state.drafts[state.turn] = value;
+      persist();
+    }
+  }
+
+  function restoreDraftInputs(){
+    $('inputMinjun').value = state.turn % 2 === 0 ? (state.drafts[state.turn] || '') : '';
+    $('inputSora').value = state.turn % 2 === 1 ? (state.drafts[state.turn] || '') : '';
+  }
+
+  function makeGrade(score){
+    const g = gradeFor(score);
+    const span = document.createElement('span');
+    span.className = `grade ${g.key}`;
+    span.setAttribute('aria-label', `완성도 ${g.symbol}: ${g.label}`);
+    span.textContent = g.symbol;
+    return span;
+  }
+
+  function render(){
+    const current = state.completed ? -1 : state.turn;
+    chatList.innerHTML = '';
+
+    LINES.forEach((line, index) => {
+      const msg = document.createElement('article');
+      msg.className = `message ${line.speaker}`;
+      if(index > current && !state.completed) msg.classList.add('future');
+      if(index === current) {
+        msg.classList.add('current');
+        msg.dataset.current = 'true';
+      }
+
+      const label = document.createElement('div');
+      label.className = 'speaker-label';
+      label.textContent = line.name;
+
+      const wrap = document.createElement('div');
+      wrap.className = 'bubble-wrap';
+
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+
+      const spoken = responseText(state.responses[index]);
+      const hasScore = spoken && Number.isFinite(Number(state.scores[index]));
+
+      if(hasScore){
+        bubble.appendChild(makeGrade(Number(state.scores[index])));
+      }
+
+      const original = document.createElement('div');
+      original.textContent = line.text;
+      bubble.appendChild(original);
+
+      if(hasScore){
+        const spokenBox = document.createElement('div');
+        spokenBox.className = 'spoken';
+
+        const spokenLabel = document.createElement('div');
+        spokenLabel.className = 'spoken-label';
+        spokenLabel.textContent = '학생 말하기';
+
+        const spokenText = document.createElement('div');
+        spokenText.className = 'spoken-text';
+        spokenText.textContent = spoken;
+
+        spokenBox.append(spokenLabel, spokenText);
+        bubble.appendChild(spokenBox);
+      }
+
+      wrap.appendChild(bubble);
+      msg.append(label, wrap);
+      chatList.appendChild(msg);
+    });
+
+    progress.textContent = state.completed ? '대화 완료' : `현재 진행 ${state.turn + 1} / 6`;
+
+    updatePanels();
+    restoreDraftInputs();
+    updateNextButton();
+
+    requestAnimationFrame(() => {
+      if(state.completed){
+        chatWindow.scrollTo({top: chatWindow.scrollHeight, behavior: reducedMotion() ? 'auto' : 'smooth'});
+        return;
+      }
+      const currentBubble = chatList.querySelector('[data-current="true"] .bubble');
+      if(!currentBubble) return;
+      const windowRect = chatWindow.getBoundingClientRect();
+      const currentRect = currentBubble.getBoundingClientRect();
+      const targetTop = Math.max(
+        0,
+        chatWindow.scrollTop + currentRect.top - windowRect.top - 18
+      );
+      chatWindow.scrollTo({
+        top: targetTop,
+        behavior: reducedMotion() ? 'auto' : 'smooth'
+      });
+    });
+  }
+
+  function updatePanels(){
+    const activeMinjun = !state.completed && state.turn % 2 === 0;
+    const activeSora = !state.completed && state.turn % 2 === 1;
+
+    $('panelMinjun').dataset.active = String(activeMinjun);
+    $('panelSora').dataset.active = String(activeSora);
+
+    $('speakMinjun').disabled = !activeMinjun;
+    $('speakSora').disabled = !activeSora;
+    $('inputMinjun').disabled = !activeMinjun;
+    $('inputSora').disabled = !activeSora;
+    $('confirmMinjun').disabled = !activeMinjun;
+    $('confirmSora').disabled = !activeSora;
+
+    $('stateMinjun').textContent = state.completed
+      ? '대화를 모두 마쳤어요.'
+      : activeMinjun
+        ? (responseText(state.responses[state.turn]) ? '피드백을 확인하고 다시 말해도 좋아요.' : '지금 내 대사를 말하세요.')
+        : '상대의 차례를 기다리세요.';
+
+    $('stateSora').textContent = state.completed
+      ? '대화를 모두 마쳤어요.'
+      : activeSora
+        ? (responseText(state.responses[state.turn]) ? '피드백을 확인하고 다시 말해도 좋아요.' : '지금 내 대사를 말하세요.')
+        : '상대의 차례를 기다리세요.';
+
+    $('stateMinjun').classList.toggle('active', activeMinjun);
+    $('stateSora').classList.toggle('active', activeSora);
+  }
+
+  function updateNextButton(){
+    nextBtn.disabled = !state.completed && !responseText(state.responses[state.turn]);
+    if(state.completed) nextBtn.textContent = '처음부터 다시';
+    else if(state.turn === 5) nextBtn.textContent = '대화 마치기';
+    else nextBtn.textContent = '다음 차례';
+  }
+
+  function setResponse(text){
+    if(state.completed) return;
+    const index = state.turn;
+    const expectedSpeaker = LINES[index].speaker;
+    const activeSpeaker = index % 2 === 0 ? 'minjun' : 'sora';
+
+    if(expectedSpeaker !== activeSpeaker) return;
+
+    const clean = String(text || '').trim();
+    if(!clean){
+      showToast('문장을 말하거나 직접 입력한 뒤 확인하세요.');
+      return;
+    }
+
+    state.responses[index] = clean;
+    state.scores[index] = scoreSpeech(LINES[index].text, clean);
+    state.drafts[index] = clean;
+    persist();
+    render();
+    showToast(`${LINES[index].name}의 말하기가 표시됐어요. 피드백을 확인하세요.`);
+  }
+
+  function nextTurn(){
+    if(state.completed){
+      resetActivity();
+      return;
+    }
+    if(!responseText(state.responses[state.turn])) return;
+
+    if(state.turn < 5){
+      state.turn += 1;
+      persist();
+      render();
+    }else{
+      state.completed = true;
+      persist();
+      render();
+      showToast(`대화 완료 · O ${countGrade('o')}개 · 다시 연습할 수 있어요.`);
+    }
+  }
+
+  function countGrade(key){
+    return Object.values(state.scores).filter(v => gradeFor(Number(v)).key === key).length;
+  }
+
+  function resetActivity(){
+    state.turn = 0;
+    state.responses = {};
+    state.scores = {};
+    state.drafts = {};
+    state.completed = false;
+    persist();
+    render();
+    chatWindow.scrollTo({top:0,behavior:'auto'});
+    showToast('처음부터 다시 연습합니다.');
+  }
+
+  function reducedMotion(){
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  let toastTimer;
+  function showToast(message){
+    clearTimeout(toastTimer);
+    toast.textContent = message;
+    toast.classList.add('show');
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2400);
+  }
+
+  function startSpeech(speaker){
+    const expected = state.turn % 2 === 0 ? 'minjun' : 'sora';
+    if(state.completed || speaker !== expected) return;
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(!SpeechRecognition){
+      showToast('이 브라우저에서는 음성 인식을 지원하지 않아요. 직접 입력을 사용하세요.');
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'ko-KR';
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    recognition.maxAlternatives = 1;
+
+    const textarea = speaker === 'minjun' ? $('inputMinjun') : $('inputSora');
+    const original = textarea.value;
+    showToast(`${LINES[state.turn].name}의 말을 듣고 있어요.`);
+
+    recognition.onresult = event => {
+      let interim = '';
+      let finalText = '';
+      for(let i=event.resultIndex;i<event.results.length;i++){
+        const part = event.results[i][0].transcript;
+        if(event.results[i].isFinal) finalText += part;
+        else interim += part;
+      }
+      textarea.value = finalText || interim || original;
+      if(finalText) setResponse(finalText);
+    };
+
+    recognition.onerror = () => showToast('음성 인식에 문제가 있어요. 직접 입력으로도 연습할 수 있어요.');
+    recognition.onend = () => {
+      if(textarea.value.trim() && !responseText(state.responses[state.turn])){
+        state.drafts[state.turn] = textarea.value;
+        persist();
+      }
+    };
+
+    try{ recognition.start(); }
+    catch(err){ showToast('음성 인식을 시작할 수 없어요. 잠시 후 다시 시도하세요.'); }
+  }
+
+  function bind(){
+    $('speakMinjun').addEventListener('click', () => startSpeech('minjun'));
+    $('speakSora').addEventListener('click', () => startSpeech('sora'));
+    $('confirmMinjun').addEventListener('click', () => setResponse($('inputMinjun').value));
+    $('confirmSora').addEventListener('click', () => setResponse($('inputSora').value));
+    nextBtn.addEventListener('click', nextTurn);
+    $('resetBtn').addEventListener('click', () => {
+      if(confirm('이 활동의 저장 기록을 모두 지우고 처음부터 시작할까요?')) resetActivity();
+    });
+    $('downloadBtn').addEventListener('click', () => {
+      const record = {
+        pageId: PAGE_ID,
+        activity: '약국에서 이야기해요',
+        lines: LINES,
+        responses: state.responses,
+        scores: state.scores,
+        completed: state.completed
+      };
+      const blob = new Blob([JSON.stringify(record,null,2)], {type:'application/json;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '약국_2인_대화_기록.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    $('inputMinjun').addEventListener('input', () => {
+      if(state.turn % 2 === 0){
+        state.drafts[state.turn] = $('inputMinjun').value;
+        persist();
+      }
+    });
+    $('inputSora').addEventListener('input', () => {
+      if(state.turn % 2 === 1){
+        state.drafts[state.turn] = $('inputSora').value;
+        persist();
+      }
+    });
+
+    const saveDraftOnPageLeave = () => {
+      saveDraftFromInputs();
+      persist();
+    };
+    window.addEventListener('pagehide', saveDraftOnPageLeave);
+    document.addEventListener('visibilitychange', () => {
+      if(document.visibilityState === 'hidden') saveDraftOnPageLeave();
+    });
+  }
+
+  load();
+  bind();
+  render();
+})();
+</script>
+</body>
+</html>
